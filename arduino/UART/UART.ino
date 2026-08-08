@@ -33,9 +33,10 @@ uint8_t txValue = 0;
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
-#define SERVICE_UUID           "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"  // UART service UUID
-#define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
-#define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
+#define DEVICE_NAME            "LBUartBLE"
+#define SERVICE_UUID           "F680"  // UART service UUID
+#define CHARACTERISTIC_UUID_RX "F681"
+#define CHARACTERISTIC_UUID_TX "F684"
 
 class MyServerCallbacks : public BLEServerCallbacks {
   void onConnect(BLEServer *pServer) {
@@ -54,14 +55,18 @@ class MyCallbacks : public BLECharacteristicCallbacks {
     String rxValue = pCharacteristic->getValue();
 
     if (rxValue.length() > 0) {
-      Serial.println("*********");
-      Serial.print("Received Value: ");
+      Serial.printf("[%lu ms] Received Bytes (hex): ", millis());
       for (int i = 0; i < rxValue.length(); i++) {
-        Serial.print(rxValue[i]);
+        uint8_t byteValue = static_cast<uint8_t>(rxValue[i]);
+        if (byteValue < 0x10) {
+          Serial.print('0');
+        }
+        Serial.print(byteValue, HEX);
+        if (i < rxValue.length() - 1) {
+          Serial.print(' ');
+        }
       }
-
       Serial.println();
-      Serial.println("*********");
     }
   }
 };
@@ -70,7 +75,7 @@ void setup() {
   Serial.begin(115200);
 
   // Create the BLE Device
-  BLEDevice::init("UART Service");
+  BLEDevice::init(DEVICE_NAME);
 
   // Create the BLE Server
   pServer = BLEDevice::createServer();
@@ -85,7 +90,7 @@ void setup() {
   // Descriptor 2902 is not required when using NimBLE as it is automatically added based on the characteristic properties
   pTxCharacteristic->addDescriptor(new BLE2902());
 
-  BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_RX, BLECharacteristic::PROPERTY_WRITE);
+  BLECharacteristic *pRxCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_RX, BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR);
 
   pRxCharacteristic->setCallbacks(new MyCallbacks());
 
